@@ -24,7 +24,7 @@ db = os.environ["DWH_PSQL_DB"]
 host = os.environ["DWH_RDS_HOST95"]
 
 conn_string = "host='"+host+"' dbname='"+db+"' user='"+usr+"' password='"+pwd+"'"
-print "Connection String: %s\n" % (conn_string)
+# print "Connection String: %s\n" % (conn_string)
 
 try:
 	# raise TypeError("Naah, yo.") # Use this to test flow of program and ensure NOT UnboundLocalError: local variable 'cur' referenced before assignment
@@ -40,7 +40,8 @@ try:
 	# df2 = pd.read_sql_query("""SELECT drupal_user_id, onboarding_term FROM common.user_onboarding_fact WHERE user_score IS NOT NULL LIMIT 25""", connection)
 	# print df2
 
-	views_df = pd.read_sql_query("""SELECT drupal_user_id, media_nid, qualified_view FROM common.video_views_fact WHERE qualified_view > 0 LIMIT 500""", connection)
+	# views_df = pd.read_sql_query("SELECT drupal_user_id, media_nid, qualified_view FROM common.video_views_fact WHERE qualified_view > 0 LIMIT 8000", connection)
+	views_df = pd.read_sql_query("SELECT drupal_user_id, media_nid, qualified_view FROM common.video_views_fact LIMIT 57000", connection)
 	# views_df.replace('1', 1)
 	# views_df.columns = ['drupal_user_id', 'media_nid', 'views']
 	# print views_df.head()
@@ -71,12 +72,14 @@ try:
 
 	seed = 49247
 	iterations = 10
-	lambdas = [0.01, 0.1]
+	# lambdas = [0.01, 0.1]
+	lambdas = [0.01, 0.1, 10.0]
+	# ranks = [16]
 	ranks = [16]
-	alphas = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 40.0, 80.0]
+	# alphas = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 40.0, 80.0]
+	alphas = [80.0]
 	errors = [0 for x in range(len(alphas) * len(ranks) * len(lambdas))]
 	err_index = 0
-
 	for lambda_ in lambdas:
 		for rank in ranks:
 			for alpha in alphas:
@@ -87,17 +90,11 @@ try:
 				errors[err_index] = error
 				err_index += 1
 				print('For rank {0} at alpha: {1} and lambda: {2}, the RMSE is {3}'.format(rank, alpha, lambda_, error))
+
+	# print model.recommendProductsForUsers(2).collect()[:5]
+	print model.recommendProducts(1216, 5)
 except Exception, err:
-	print "Unable to read_sql_query.\n"
+	# print "Unable to read_sql_query.\n"
 	traceback.print_exc()
 
-# try:
-# 	cur.execute("""SELECT * FROM common.video_views_fact LIMIT 100""")
-# 	rows = cur.fetchall()
-# 	print "\nvideo_views_fact:\n"
-# 	for row in rows:
-# 		print "   ", row[0]
-# except Exception, err:
-# 	print "Cannot retreive.\n"
-# 	traceback.print_exc()
 connection.close()

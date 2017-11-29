@@ -10,33 +10,55 @@ from pyspark import SparkContext
 from pyspark.sql import SQLContext
 from pyspark.mllib.recommendation import ALS
 import math
+# import boto3
 
-USR = os.environ["DWH_DB_USER"]
-PWD = os.environ["DWH_DB_PWD"]
-DB = os.environ["DWH_PSQL_DB"]
-HOST = os.environ["DWH_RDS_HOST95"]
-CONN_STRING = "host='"+HOST+"' dbname='"+DB+"' user='"+USR+"' password='"+PWD+"'"
+# USR = os.environ["DWH_DB_USER"]
+# PWD = os.environ["DWH_DB_PWD"]
+# DB = os.environ["DWH_PSQL_DB"]
+# HOST = os.environ["DWH_RDS_HOST95"]
+# CONN_STRING = "host='"+HOST+"' dbname='"+DB+"' user='"+USR+"' password='"+PWD+"'"
 # print "Connection String: %s\n" % (CONN_STRING)
 
-def main(sqlContext):
-	try:
-		# raise TypeError("Naah, yo.") # Use this to test flow of program and ensure NOT UnboundLocalError: local variable 'cur' referenced before assignment
-		connection = psycopg2.connect(CONN_STRING)
-		print "Connected!\n"
-		cur = connection.cursor()
-	except Exception, err:
-		print "Unable to connect to the database.\n"
-		traceback.print_exc()
+def main(sc):
+	# USR = os.environ["DWH_DB_USER"]
+	# PWD = os.environ["DWH_DB_PWD"]
+	# DB = os.environ["DWH_PSQL_DB"]
+	# HOST = os.environ["DWH_RDS_HOST95"]
+	# USR = sc.getConf.get("spark.poc.DWH_DB_USER")
+	# PWD = sc.getConf.get("spark.poc.DWH_DB_PWD")
+	# DB = sc.getConf.get("spark.poc.DWH_PSQL_DB")
+	# HOST = sc.getConf.get("spark.poc.DWH_RDS_HOST95")
+	# CONN_STRING = "host='"+HOST+"' dbname='"+DB+"' user='"+USR+"' password='"+PWD+"'"
+	# try:
+	# 	# raise TypeError("Naah, yo.") # Use this to test flow of program and ensure NOT UnboundLocalError: local variable 'cur' referenced before assignment
+	# 	connection = psycopg2.connect(CONN_STRING)
+	# 	print "Connected!\n"
+	# 	# cur = connection.cursor()
+	# except Exception, err:
+	# 	print "Unable to connect to the database.\n"
+	# 	traceback.print_exc()
 
 	try:
+		# s3 = boto3.client('s3')
+		# s3.download_file(
+		# 	'gaia-poc-spark',
+		# 	'SELECT_drupal_user_id_media_nid_qualified_view_FROM_common_video_201711281500.csv',
+		# 	'/tmp/views.csv'
+		# )
+		# views_df = pd.read_csv('/tmp/views.csv', index_col=None, header=None)
+		views_df = pd.read_csv('SELECT_drupal_user_id_media_nid_qualified_view_FROM_common_video_201711281500.csv', index_col=None)
+		# print views_df.head()
+
 		# df1 = pd.read_sql_query("""SELECT drupal_user_id, media_nid, qualified_view FROM common.video_views_fact LIMIT 25""", connection)
 		# df2 = pd.read_sql_query("""SELECT drupal_user_id, onboarding_term FROM common.user_onboarding_fact WHERE user_score IS NOT NULL LIMIT 25""", connection)
 		# print df2
 
 		# views_df = pd.read_sql_query("SELECT drupal_user_id, media_nid, qualified_view FROM common.video_views_fact WHERE qualified_view > 0 LIMIT 8000", connection)
-		views_df = pd.read_sql_query("SELECT drupal_user_id, media_nid, qualified_view FROM common.video_views_fact LIMIT 57000", connection)
-		# views_df.replace('1', 1)
-		# views_df.columns = ['drupal_user_id', 'media_nid', 'views']
+		# views_df = pd.read_sql_query("SELECT drupal_user_id, media_nid, qualified_view FROM common.video_views_fact LIMIT 57000", connection)
+		# connection = psycopg2.connect(CONN_STRING)
+		# views_df = pd.read_sql_query("SELECT drupal_user_id, media_nid, qualified_view FROM common.video_views_fact LIMIT 57000", connection)
+		views_df = views_df.replace('1', 1)
+		views_df.columns = ['drupal_user_id', 'media_nid', 'views']
 		# print views_df.head()
 		# print views_df
 
@@ -54,11 +76,12 @@ def main(sqlContext):
 		# print n_views_df.head()
 		# print n_views_df
 
+		sqlContext = SQLContext(sc)
 		n_views_rdd = sqlContext.createDataFrame(n_views_df).rdd
 		training_rdd, validation_rdd, test_rdd = n_views_rdd.randomSplit([6, 2, 2], 1345)
 		validation_for_predict_rdd = validation_rdd.map(lambda x: (x[0], x[1]))
 		test_for_predict_rdd = test_rdd.map(lambda x: (x[0], x[1]))
-		
+
 		# print 'Training RDD\n', training_rdd.take(5)
 		# print '\nValidation for Prediction RDD\n', validation_for_predict_rdd.take(5)
 		# print '\nTest for Prediction RDD\n', test_for_predict_rdd.take(5)
@@ -89,9 +112,10 @@ def main(sqlContext):
 	except Exception, err:
 		# print "Unable to read_sql_query.\n"
 		traceback.print_exc()
-	connection.close()
+	# connection.close()
 
 if __name__ == "__main__":
 	sc = SparkContext(appName="BuildRecommendations")
-	sqlContext = SQLContext(sc)
-	main(sqlContext)
+	sc.setLogLevel("WARN")
+	main(sc)
+	sc.stop()

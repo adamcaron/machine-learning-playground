@@ -8,8 +8,9 @@ from sklearn import preprocessing
 import pyspark
 from pyspark import SparkContext
 from pyspark.sql import SQLContext
-from pyspark.mllib.recommendation import ALS
+from pyspark.mllib.recommendation import ALS, MatrixFactorizationModel
 import math
+import time
 # import boto3
 
 # USR = os.environ["DWH_DB_USER"]
@@ -61,6 +62,7 @@ def main(sc):
 		views_df.columns = ['drupal_user_id', 'media_nid', 'views']
 		# print views_df.head()
 		# print views_df
+		# views_df.info() # https://jessesw.com/Rec-System/
 
 		user_id_le = preprocessing.LabelEncoder()
 		media_nid_le = preprocessing.LabelEncoder()
@@ -89,9 +91,9 @@ def main(sc):
 		seed = 49247
 		iterations = 10
 		# lambdas = [0.01, 0.1]
-		lambdas = [0.01, 0.1, 10.0]
+		lambdas = [0.01, 0.1, 10.0] # regularizations
 		# ranks = [16]
-		ranks = [16]
+		ranks = [16] #latent_factors
 		# alphas = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 40.0, 80.0]
 		alphas = [80.0]
 		errors = [0 for x in range(len(alphas) * len(ranks) * len(lambdas))]
@@ -109,6 +111,11 @@ def main(sc):
 
 		# print model.recommendProductsForUsers(2).collect()[:5]
 		print model.recommendProducts(1216, 5)
+		timestamp = time.strftime("%Y%m%d-%H%M%S")
+		model.save(sc, './tmp/collaborative_filter_' + timestamp)
+
+		same_model = MatrixFactorizationModel.load(sc, './tmp/collaborative_filter_' + timestamp)
+		print 'again: ', same_model.recommendProducts(1216, 5)
 	except Exception, err:
 		# print "Unable to read_sql_query.\n"
 		traceback.print_exc()

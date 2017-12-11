@@ -1,0 +1,1 @@
+[{"classification":"spark-defaults", "properties":{"spark.jars.packages":"com.amazonaws:aws-java-sdk:1.11.244,org.apache.hadoop:hadoop-aws:2.7.3", "spark.serializer":"org.apache.spark.serializer.KryoSerializer", "spark.dynamicAllocation.enabled":"true"}, "configurations":[]}]
